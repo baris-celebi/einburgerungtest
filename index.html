@@ -65,9 +65,9 @@
 </div>
 
 <!-- ═══════════════ EXAM ═══════════════ -->
-<div id="view-exam" class="view">
+<div id="view-exam" class="view view-flex">
   <!-- Exam start screen -->
-  <div id="exam-start">
+  <div id="exam-start" class="scroll-area">
     <div style="text-align:center;padding:60px 20px;">
       <div style="font-size:3rem;margin-bottom:16px;">✏️</div>
       <h2 style="margin-bottom:12px;">Sınav Moduna Hoş Geldin</h2>
@@ -98,7 +98,7 @@
   </div>
 
   <!-- Exam result -->
-  <div id="exam-result" style="display:none;"></div>
+  <div id="exam-result" class="scroll-area" style="display:none;"></div>
 </div>
 
 <!-- ═══════════════ HISTORY ═══════════════ -->
@@ -283,7 +283,7 @@ function startExam() {
   examIndex     = 0;
 
   document.getElementById('exam-start').style.display       = 'none';
-  document.getElementById('exam-in-progress').style.display = 'block';
+  document.getElementById('exam-in-progress').style.display = 'flex';
   document.getElementById('exam-result').style.display      = 'none';
 
   renderExamCard();
