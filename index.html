@@ -44,23 +44,20 @@
 </div>
 
 <!-- ═══════════════ STUDY ═══════════════ -->
-<div id="view-study" class="view">
-  <div class="study-controls">
-    <div class="filter-group">
-      <button class="filter-btn active" onclick="setFilter('all', this)">Tümü (310)</button>
-      <button class="filter-btn" onclick="setFilter('general', this)">Genel (300)</button>
-      <button class="filter-btn" onclick="setFilter('berlin', this)">Berlin (10)</button>
+<div id="view-study" class="view view-flex">
+  <div class="scroll-area">
+    <div class="study-controls">
+      <div class="filter-group">
+        <button class="filter-btn active" onclick="setFilter('all', this)">Tümü (310)</button>
+        <button class="filter-btn" onclick="setFilter('general', this)">Genel (300)</button>
+        <button class="filter-btn" onclick="setFilter('berlin', this)">Berlin (10)</button>
+      </div>
+      <span class="progress-info" id="study-progress">1 / 310</span>
     </div>
-    <span class="progress-info" id="study-progress">1 / 310</span>
+    <div class="question-jump" id="study-jump-grid"></div>
+    <div class="question-card" id="study-card"></div>
   </div>
-
-  <div class="question-jump" id="study-jump-grid"></div>
-
-  <div class="question-card" id="study-card">
-    <!-- filled by JS -->
-  </div>
-
-  <div class="nav-controls">
+  <div class="nav-controls sticky-nav">
     <button class="btn btn-secondary" id="btn-prev" onclick="studyNav(-1)">&#8592; Geri</button>
     <button class="btn btn-dark" onclick="toggleWrongOptions()" id="toggle-wrong-btn">Tüm şıkları göster</button>
     <button class="btn btn-secondary" id="btn-next" onclick="studyNav(1)">İleri &#8594;</button>
@@ -82,16 +79,18 @@
 
   <!-- Exam in-progress -->
   <div id="exam-in-progress" style="display:none;">
-    <div class="exam-header">
-      <span id="exam-q-counter" style="font-weight:600;color:#555;"></span>
-      <button class="btn btn-primary" onclick="finishExam()">Sınavı Bitir</button>
+    <div class="scroll-area">
+      <div class="exam-header">
+        <span id="exam-q-counter" style="font-weight:600;color:#555;"></span>
+        <button class="btn btn-primary" onclick="finishExam()">Sınavı Bitir</button>
+      </div>
+      <div class="exam-progress-bar">
+        <div class="exam-progress-fill" id="exam-progress-fill"></div>
+      </div>
+      <div id="exam-jump-grid" class="question-jump"></div>
+      <div id="exam-card" class="question-card"></div>
     </div>
-    <div class="exam-progress-bar">
-      <div class="exam-progress-fill" id="exam-progress-fill"></div>
-    </div>
-    <div id="exam-jump-grid" class="question-jump"></div>
-    <div id="exam-card" class="question-card"></div>
-    <div class="nav-controls">
+    <div class="nav-controls sticky-nav">
       <button class="btn btn-secondary" id="exam-btn-prev" onclick="examNav(-1)">&#8592; Geri</button>
       <span></span>
       <button class="btn btn-secondary" id="exam-btn-next" onclick="examNav(1)">İleri &#8594;</button>
@@ -107,6 +106,25 @@
   <h2 style="margin-bottom:20px;">Sınav Geçmişi</h2>
   <div id="history-content"></div>
 </div>
+
+<nav class="bottom-nav">
+  <button class="bottom-tab active" id="btab-home" onclick="showView('home')">
+    <span class="btab-icon">🏠</span>
+    <span class="btab-label">Ana Sayfa</span>
+  </button>
+  <button class="bottom-tab" id="btab-study" onclick="showView('study')">
+    <span class="btab-icon">📖</span>
+    <span class="btab-label">Çalışma</span>
+  </button>
+  <button class="bottom-tab" id="btab-exam" onclick="startExam()">
+    <span class="btab-icon">✏️</span>
+    <span class="btab-label">Sınav</span>
+  </button>
+  <button class="bottom-tab" id="btab-history" onclick="showView('history')">
+    <span class="btab-icon">📊</span>
+    <span class="btab-label">Geçmiş</span>
+  </button>
+</nav>
 
 <script src="questions.js"></script>
 <script>
@@ -129,10 +147,13 @@ let examIndex     = 0;
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   const tabs = document.querySelectorAll('.nav-tab');
   const labels = ['home', 'study', 'exam', 'history'];
   tabs[labels.indexOf(name)]?.classList.add('active');
+  const btab = document.getElementById('btab-' + name);
+  if (btab) btab.classList.add('active');
   currentView = name;
 
   if (name === 'home')    renderHome();
