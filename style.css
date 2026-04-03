@@ -746,6 +746,6 @@ header h1 {
 
   /* İçerik bottom nav'ın arkasında kalmasın */
   .view { padding-bottom: 74px; }
-  .view-flex { height: calc(100vh - 54px - 58px); }
+  .view-flex { height: calc(100vh - 54px - 58px); padding-bottom: 0; }
   .sticky-nav { padding-bottom: 10px; }
 }
