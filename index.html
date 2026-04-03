@@ -45,22 +45,22 @@
 
 <!-- ═══════════════ STUDY ═══════════════ -->
 <div id="view-study" class="view view-flex">
-  <div class="study-topbar">
-    <div class="filter-group">
-      <button class="filter-btn active" onclick="setFilter('all', this)">Tümü (310)</button>
-      <button class="filter-btn" onclick="setFilter('general', this)">Genel (300)</button>
-      <button class="filter-btn" onclick="setFilter('berlin', this)">Berlin (10)</button>
-    </div>
-    <div class="nav-controls" style="margin:0;">
-      <button class="btn btn-secondary" id="btn-prev" onclick="studyNav(-1)">&#8592; Geri</button>
-      <button class="btn btn-dark" onclick="toggleWrongOptions()" id="toggle-wrong-btn">Tüm şıkları göster</button>
-      <button class="btn btn-secondary" id="btn-next" onclick="studyNav(1)">İleri &#8594;</button>
-    </div>
-    <span class="progress-info" id="study-progress">1 / 310</span>
-  </div>
   <div class="scroll-area">
+    <div class="study-controls">
+      <div class="filter-group">
+        <button class="filter-btn active" onclick="setFilter('all', this)">Tümü (310)</button>
+        <button class="filter-btn" onclick="setFilter('general', this)">Genel (300)</button>
+        <button class="filter-btn" onclick="setFilter('berlin', this)">Berlin (10)</button>
+      </div>
+      <span class="progress-info" id="study-progress">1 / 310</span>
+    </div>
     <div class="question-jump" id="study-jump-grid"></div>
     <div class="question-card" id="study-card"></div>
+  </div>
+  <div class="nav-controls sticky-nav">
+    <button class="btn btn-secondary" id="btn-prev" onclick="studyNav(-1)">&#8592; Geri</button>
+    <button class="btn btn-dark" onclick="toggleWrongOptions()" id="toggle-wrong-btn">Tüm şıkları göster</button>
+    <button class="btn btn-secondary" id="btn-next" onclick="studyNav(1)">İleri &#8594;</button>
   </div>
 </div>
 

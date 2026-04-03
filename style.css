@@ -158,28 +158,6 @@ header h1 {
 }
 
 /* ── Study Mode ── */
-.study-topbar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-}
-
-.study-topbar .nav-controls {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.study-topbar .btn {
-  padding: 7px 14px;
-  font-size: 0.82rem;
-}
-
 .study-controls {
   display: flex;
   align-items: center;
