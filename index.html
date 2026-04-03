@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Einbürgerungstest - Çalışma</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <div class="flag-stripe"></div>
+  <div class="header-inner">
+    <h1>Einbürgerungstest</h1>
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="showView('home')">Ana Sayfa</button>
+      <button class="nav-tab" onclick="showView('study')">Çalışma</button>
+      <button class="nav-tab" onclick="showView('exam')">Sınav</button>
+      <button class="nav-tab" onclick="showView('history')">Geçmiş</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ═══════════════ HOME ═══════════════ -->
+<div id="view-home" class="view active">
+  <div id="home-stats" class="stats-bar" style="margin-top:20px;"></div>
+  <div class="home-grid">
+    <div class="mode-card" onclick="showView('study')">
+      <div class="icon">📖</div>
+      <h2>Çalışma Modu</h2>
+      <p>Tüm soruları sırayla gör. Sadece doğru cevap gösterilir, istersen yanlış şıkları da aç. Genel ve Berlin sorularını ayrı filtrele.</p>
+    </div>
+    <div class="mode-card" onclick="startExam()">
+      <div class="icon">✏️</div>
+      <h2>Sınav Modu</h2>
+      <p>Gerçek sınav gibi: 30 genel + 3 Berlin = 33 rastgele soru. Sonuçların kaydedilir, gelişimini takip edebilirsin.</p>
+    </div>
+    <div class="mode-card" onclick="showView('history')">
+      <div class="icon">📊</div>
+      <h2>Geçmiş</h2>
+      <p>Önceki sınav sonuçlarını gör. Hangi sorularda takıldığını analiz et.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ STUDY ═══════════════ -->
+<div id="view-study" class="view">
+  <div class="study-controls">
+    <div class="filter-group">
+      <button class="filter-btn active" onclick="setFilter('all', this)">Tümü (310)</button>
+      <button class="filter-btn" onclick="setFilter('general', this)">Genel (300)</button>
+      <button class="filter-btn" onclick="setFilter('berlin', this)">Berlin (10)</button>
+    </div>
+    <span class="progress-info" id="study-progress">1 / 310</span>
+  </div>
+
+  <div class="question-jump" id="study-jump-grid"></div>
+
+  <div class="question-card" id="study-card">
+    <!-- filled by JS -->
+  </div>
+
+  <div class="nav-controls">
+    <button class="btn btn-secondary" id="btn-prev" onclick="studyNav(-1)">&#8592; Geri</button>
+    <button class="btn btn-dark" onclick="toggleWrongOptions()" id="toggle-wrong-btn">Tüm şıkları göster</button>
+    <button class="btn btn-secondary" id="btn-next" onclick="studyNav(1)">İleri &#8594;</button>
+  </div>
+</div>
+
+<!-- ═══════════════ EXAM ═══════════════ -->
+<div id="view-exam" class="view">
+  <!-- Exam start screen -->
+  <div id="exam-start">
+    <div style="text-align:center;padding:60px 20px;">
+      <div style="font-size:3rem;margin-bottom:16px;">✏️</div>
+      <h2 style="margin-bottom:12px;">Sınav Moduna Hoş Geldin</h2>
+      <p style="color:#666;margin-bottom:8px;">30 genel + 3 Berlin = <strong>33 soru</strong></p>
+      <p style="color:#666;margin-bottom:32px;">Geçme notu: en az <strong>17 / 33</strong> doğru</p>
+      <button class="btn btn-primary" style="font-size:1rem;padding:14px 40px;" onclick="startExam()">Sınavı Başlat</button>
+    </div>
+  </div>
+
+  <!-- Exam in-progress -->
+  <div id="exam-in-progress" style="display:none;">
+    <div class="exam-header">
+      <span id="exam-q-counter" style="font-weight:600;color:#555;"></span>
+      <button class="btn btn-primary" onclick="finishExam()">Sınavı Bitir</button>
+    </div>
+    <div class="exam-progress-bar">
+      <div class="exam-progress-fill" id="exam-progress-fill"></div>
+    </div>
+    <div id="exam-jump-grid" class="question-jump"></div>
+    <div id="exam-card" class="question-card"></div>
+    <div class="nav-controls">
+      <button class="btn btn-secondary" id="exam-btn-prev" onclick="examNav(-1)">&#8592; Geri</button>
+      <span></span>
+      <button class="btn btn-secondary" id="exam-btn-next" onclick="examNav(1)">İleri &#8594;</button>
+    </div>
+  </div>
+
+  <!-- Exam result -->
+  <div id="exam-result" style="display:none;"></div>
+</div>
+
+<!-- ═══════════════ HISTORY ═══════════════ -->
+<div id="view-history" class="view">
+  <h2 style="margin-bottom:20px;">Sınav Geçmişi</h2>
+  <div id="history-content"></div>
+</div>
+
+<script src="questions.js"></script>
+<script>
+// ─── Data Setup ───────────────────────────────────────────────────────────────
+const GENERAL_QUESTIONS = QUESTIONS.filter(q => q.question_number <= 300);
+const BERLIN_QUESTIONS  = QUESTIONS.filter(q => q.question_number >= 321);
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let currentView = 'home';
+let studyFilter = 'all';
+let studyList   = [...QUESTIONS];
+let studyIndex  = 0;
+let wrongRevealed = false;
+
+let examQuestions = [];
+let examAnswers   = {};
+let examIndex     = 0;
+
+// ─── View Router ─────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const labels = ['home', 'study', 'exam', 'history'];
+  tabs[labels.indexOf(name)]?.classList.add('active');
+  currentView = name;
+
+  if (name === 'home')    renderHome();
+  if (name === 'study')   renderStudy();
+  if (name === 'history') renderHistory();
+}
+
+// ─── Home ────────────────────────────────────────────────────────────────────
+function renderHome() {
+  const results = loadResults();
+  const total = results.length;
+  const best  = total ? Math.max(...results.map(r => r.score)) : '-';
+  const last  = total ? results[results.length - 1] : null;
+
+  document.getElementById('home-stats').innerHTML = `
+    <div class="stat-item"><div class="stat-value">${QUESTIONS.length}</div><div class="stat-label">Toplam Soru</div></div>
+    <div class="stat-item"><div class="stat-value">${total}</div><div class="stat-label">Yapılan Sınav</div></div>
+    <div class="stat-item"><div class="stat-value">${best === '-' ? '-' : best + '/33'}</div><div class="stat-label">En İyi Skor</div></div>
+    <div class="stat-item"><div class="stat-value">${last ? (last.passed ? 'GEÇTI' : 'KALDI') : '-'}</div><div class="stat-label">Son Sınav</div></div>
+  `;
+}
+
+// ─── Study Mode ──────────────────────────────────────────────────────────────
+function setFilter(filter, btn) {
+  studyFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  studyIndex = 0;
+  if (filter === 'all')     studyList = [...QUESTIONS];
+  if (filter === 'general') studyList = [...GENERAL_QUESTIONS];
+  if (filter === 'berlin')  studyList = [...BERLIN_QUESTIONS];
+  wrongRevealed = false;
+  renderStudy();
+}
+
+function renderStudy() {
+  if (studyList.length === 0) return;
+  const q = studyList[studyIndex];
+  wrongRevealed = false;
+
+  document.getElementById('study-progress').textContent = `${studyIndex + 1} / ${studyList.length}`;
+  document.getElementById('btn-prev').disabled = studyIndex === 0;
+  document.getElementById('btn-next').disabled = studyIndex === studyList.length - 1;
+  document.getElementById('toggle-wrong-btn').textContent = 'Tüm şıkları göster';
+
+  renderStudyCard(q);
+  renderStudyJumpGrid();
+}
+
+function renderStudyCard(q) {
+  const letters = ['A', 'B', 'C', 'D'];
+  const imageHtml = q.image
+    ? `<div class="image-notice">⚠️ Bu soruda bir resim bulunuyor (soru ${q.question_number}). Resim dosyaları ayrıca temin edilmelidir.</div>`
+    : '';
+
+  const optionsHtml = q.options.map((opt, i) => {
+    const isCorrect = opt === q.answer;
+    const cls = isCorrect ? 'correct' : 'hidden-wrong';
+    return `<div class="option-item ${cls}" data-idx="${i}">
+      <div class="option-letter">${letters[i]}</div>
+      <div>${opt}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('study-card').innerHTML = `
+    <div class="question-number-badge">Soru ${q.question_number}</div>
+    ${imageHtml}
+    <div class="question-text">${q.question}</div>
+    <div class="options-list" id="study-options">${optionsHtml}</div>
+  `;
+}
+
+function renderStudyJumpGrid() {
+  const grid = document.getElementById('study-jump-grid');
+  grid.innerHTML = studyList.map((q, i) => {
+    const cls = i === studyIndex ? 'jump-btn active' : 'jump-btn';
+    return `<button class="${cls}" onclick="jumpToStudy(${i})">${q.question_number}</button>`;
+  }).join('');
+}
+
+function jumpToStudy(i) {
+  studyIndex = i;
+  wrongRevealed = false;
+  renderStudy();
+}
+
+function studyNav(dir) {
+  studyIndex = Math.max(0, Math.min(studyList.length - 1, studyIndex + dir));
+  wrongRevealed = false;
+  renderStudy();
+}
+
+function toggleWrongOptions() {
+  wrongRevealed = !wrongRevealed;
+  const items = document.querySelectorAll('#study-options .option-item');
+  items.forEach(item => {
+    if (!item.classList.contains('correct')) {
+      if (wrongRevealed) {
+        item.classList.remove('hidden-wrong');
+        item.classList.add('revealed-wrong');
+      } else {
+        item.classList.remove('revealed-wrong');
+        item.classList.add('hidden-wrong');
+      }
+    }
+  });
+  document.getElementById('toggle-wrong-btn').textContent =
+    wrongRevealed ? 'Sadece doğru cevabı göster' : 'Tüm şıkları göster';
+}
+
+// ─── Exam Mode ───────────────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startExam() {
+  showView('exam');
+  const general = shuffle(GENERAL_QUESTIONS).slice(0, 30);
+  const berlin  = shuffle(BERLIN_QUESTIONS).slice(0, 3);
+  examQuestions = shuffle([...general, ...berlin]);
+  examAnswers   = {};
+  examIndex     = 0;
+
+  document.getElementById('exam-start').style.display       = 'none';
+  document.getElementById('exam-in-progress').style.display = 'block';
+  document.getElementById('exam-result').style.display      = 'none';
+
+  renderExamCard();
+}
+
+function renderExamCard() {
+  const q = examQuestions[examIndex];
+  const letters = ['A', 'B', 'C', 'D'];
+  const total   = examQuestions.length;
+
+  document.getElementById('exam-q-counter').textContent = `Soru ${examIndex + 1} / ${total}`;
+  document.getElementById('exam-progress-fill').style.width = `${((examIndex + 1) / total) * 100}%`;
+  document.getElementById('exam-btn-prev').disabled = examIndex === 0;
+  document.getElementById('exam-btn-next').disabled = examIndex === total - 1;
+
+  const imageHtml = q.image
+    ? `<div class="image-notice">⚠️ Bu soruda bir resim bulunuyor (soru ${q.question_number}). Resim dosyaları ayrıca temin edilmelidir.</div>`
+    : '';
+
+  const selected = examAnswers[q.question_number];
+
+  const optionsHtml = q.options.map((opt, i) => {
+    const sel = opt === selected ? 'selected' : '';
+    return `<div class="option-item exam-option ${sel}" onclick="selectExamAnswer('${escHtml(opt)}', this)">
+      <div class="option-letter">${letters[i]}</div>
+      <div>${opt}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('exam-card').innerHTML = `
+    <div class="question-number-badge">Soru ${q.question_number}</div>
+    ${imageHtml}
+    <div class="question-text">${q.question}</div>
+    <div class="options-list">${optionsHtml}</div>
+  `;
+
+  renderExamJumpGrid();
+}
+
+function escHtml(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+function selectExamAnswer(answer, el) {
+  const q = examQuestions[examIndex];
+  examAnswers[q.question_number] = answer;
+  document.querySelectorAll('#exam-card .exam-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('.option-letter').style.background = '#1a6dd4';
+  el.querySelector('.option-letter').style.color = '#fff';
+  renderExamJumpGrid();
+}
+
+function examNav(dir) {
+  examIndex = Math.max(0, Math.min(examQuestions.length - 1, examIndex + dir));
+  renderExamCard();
+}
+
+function renderExamJumpGrid() {
+  const grid = document.getElementById('exam-jump-grid');
+  grid.innerHTML = examQuestions.map((q, i) => {
+    let cls = 'jump-btn';
+    if (i === examIndex) cls += ' active';
+    else if (examAnswers[q.question_number]) cls += ' answered';
+    return `<button class="${cls}" onclick="jumpToExam(${i})">${i + 1}</button>`;
+  }).join('');
+}
+
+function jumpToExam(i) {
+  examIndex = i;
+  renderExamCard();
+}
+
+function finishExam() {
+  const unanswered = examQuestions.filter(q => !examAnswers[q.question_number]).length;
+  if (unanswered > 0) {
+    if (!confirm(`${unanswered} soru cevapsız. Yine de bitirmek istiyor musun?`)) return;
+  }
+
+  let score = 0;
+  const wrongList = [];
+
+  examQuestions.forEach(q => {
+    const given = examAnswers[q.question_number] || null;
+    if (given === q.answer) {
+      score++;
+    } else {
+      wrongList.push({
+        question_number: q.question_number,
+        question: q.question,
+        given_answer: given,
+        correct_answer: q.answer
+      });
+    }
+  });
+
+  const total  = examQuestions.length;
+  const passed = score >= 17;
+
+  // Save to localStorage
+  const result = {
+    date:   new Date().toISOString(),
+    score,
+    total,
+    passed,
+    wrong: wrongList
+  };
+  const results = loadResults();
+  results.push(result);
+  localStorage.setItem('einbuergerung_results', JSON.stringify(results));
+
+  showExamResult(result);
+}
+
+function showExamResult(result) {
+  document.getElementById('exam-in-progress').style.display = 'none';
+  const res = document.getElementById('exam-result');
+  res.style.display = 'block';
+
+  const statusCls  = result.passed ? 'passed' : 'failed';
+  const statusText = result.passed ? 'GEÇTİN!' : 'KALDIN';
+
+  const wrongHtml = result.wrong.length === 0
+    ? '<p style="color:#28a745;font-weight:600;">Tebrikler! Hiç yanlış yapmadın! 🎉</p>'
+    : `<div class="wrong-questions">
+        <h3>Yanlış Cevaplar (${result.wrong.length} soru)</h3>
+        ${result.wrong.map(w => `
+          <div class="wrong-item">
+            <div class="q-text">Soru ${w.question_number}: ${w.question}</div>
+            <div class="answer-line">
+              <span>Senin cevabın:</span>
+              <span class="given">${w.given_answer || '(cevapsız)'}</span>
+            </div>
+            <div class="answer-line">
+              <span>Doğru cevap:</span>
+              <span class="correct">${w.correct_answer}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+
+  res.innerHTML = `
+    <div class="result-screen">
+      <div class="result-score-circle ${statusCls}">
+        <span class="score-num">${result.score}</span>
+        <span class="score-label">/ ${result.total}</span>
+      </div>
+      <div class="result-badge ${statusCls}">${statusText}</div>
+      <p style="color:#888;font-size:0.88rem;margin-bottom:24px;">Geçme notu: 17/${result.total} &nbsp;|&nbsp; Senin skorun: ${result.score}/${result.total}</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;">
+        <button class="btn btn-primary" onclick="startExam()">Tekrar Dene</button>
+        <button class="btn btn-dark" onclick="showView('history')">Geçmişi Gör</button>
+      </div>
+      ${wrongHtml}
+    </div>
+  `;
+}
+
+// ─── History ─────────────────────────────────────────────────────────────────
+function loadResults() {
+  try {
+    return JSON.parse(localStorage.getItem('einbuergerung_results') || '[]');
+  } catch { return []; }
+}
+
+function renderHistory() {
+  const results = loadResults().slice().reverse();
+  const el = document.getElementById('history-content');
+
+  if (results.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <p>Henüz sınav yapılmadı.</p>
+      <p style="margin-top:8px;font-size:0.85rem;">Sınav moduna geç ve ilk sınavını yap!</p>
+    </div>`;
+    return;
+  }
+
+  const listHtml = results.map((r, i) => {
+    const date = new Date(r.date);
+    const dateStr = date.toLocaleDateString('tr-TR', { day:'2-digit', month:'long', year:'numeric' });
+    const timeStr = date.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
+    const statusCls = r.passed ? 'passed' : 'failed';
+    const wrongCount = r.wrong?.length ?? (r.total - r.score);
+    const examNum = results.length - i;
+
+    const wrongDetailHtml = (r.wrong && r.wrong.length > 0)
+      ? r.wrong.map(w => `
+          <div class="wrong-item">
+            <div class="q-text">Soru ${w.question_number}: ${w.question}</div>
+            <div class="answer-line">
+              <span>Senin cevabın:</span>
+              <span class="given">${w.given_answer || '(cevapsız)'}</span>
+            </div>
+            <div class="answer-line">
+              <span>Doğru cevap:</span>
+              <span class="correct">${w.correct_answer}</span>
+            </div>
+          </div>`).join('')
+      : '<p style="color:#28a745;font-size:0.88rem;padding:8px 0;">Hiç yanlış yok!</p>';
+
+    return `<div class="history-entry">
+      <div class="history-item" onclick="toggleHistoryDetail(${examNum})" style="cursor:pointer;">
+        <div class="history-score ${statusCls}">${r.score}/${r.total}</div>
+        <div class="history-meta">
+          <div style="font-weight:600;margin-bottom:2px;">Sınav #${examNum}</div>
+          <div class="history-date">${dateStr} – ${timeStr}</div>
+          <div style="margin-top:4px;font-size:0.82rem;color:#888;">Yanlış: ${wrongCount}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="history-badge ${statusCls}">${r.passed ? 'GEÇTİ' : 'KALDI'}</span>
+          <span class="detail-arrow" id="arrow-${examNum}" style="font-size:0.8rem;color:#aaa;">&#9660;</span>
+        </div>
+      </div>
+      <div class="history-detail" id="detail-${examNum}" style="display:none;">
+        <div class="wrong-questions" style="margin:0;padding:12px 16px 16px;">
+          <h3 style="margin-bottom:10px;">Yanlış Sorular</h3>
+          ${wrongDetailHtml}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const totalExams   = results.length;
+  const passedExams  = results.filter(r => r.passed).length;
+  const avgScore     = (results.reduce((s, r) => s + r.score, 0) / totalExams).toFixed(1);
+
+  el.innerHTML = `
+    <div class="stats-bar" style="margin-bottom:20px;">
+      <div class="stat-item"><div class="stat-value">${totalExams}</div><div class="stat-label">Toplam</div></div>
+      <div class="stat-item"><div class="stat-value">${passedExams}</div><div class="stat-label">Geçti</div></div>
+      <div class="stat-item"><div class="stat-value">${totalExams - passedExams}</div><div class="stat-label">Kaldı</div></div>
+      <div class="stat-item"><div class="stat-value">${avgScore}</div><div class="stat-label">Ort. Skor</div></div>
+    </div>
+    <div>${listHtml}</div>
+    <div style="text-align:center;margin-top:24px;">
+      <button class="clear-history-btn" onclick="clearHistory()">Geçmişi Temizle</button>
+    </div>
+  `;
+}
+
+function toggleHistoryDetail(examNum) {
+  const detail = document.getElementById('detail-' + examNum);
+  const arrow  = document.getElementById('arrow-' + examNum);
+  const open   = detail.style.display === 'none';
+  detail.style.display = open ? 'block' : 'none';
+  arrow.innerHTML = open ? '&#9650;' : '&#9660;';
+}
+
+function clearHistory() {
+  if (!confirm('Tüm sınav geçmişini silmek istediğinden emin misin?')) return;
+  localStorage.removeItem('einbuergerung_results');
+  renderHistory();
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+renderHome();
+renderStudy();
+</script>
+</body>
+</html>
